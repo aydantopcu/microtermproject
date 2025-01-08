@@ -1,0 +1,55 @@
+#include "stm32f4xx_hal.h"
+
+// Yağmur sensörü ve Buzzer için pin tanımlamaları
+#define RAIN_SENSOR_PIN    GPIO_PIN_0  // Yağmur sensörü GPIO pini
+#define RAIN_SENSOR_PORT   GPIOA       // Yağmur sensörü portu
+
+#define BUZZER_PIN         GPIO_PIN_1  // Buzzer GPIO pini
+#define BUZZER_PORT        GPIOA       // Buzzer portu
+
+void delay_ms(uint32_t ms);
+
+int main(void) {
+    HAL_Init();
+    __HAL_RCC_GPIOA_CLK_ENABLE();  // GPIOA clock aktif
+
+    // GPIO yapılandırması
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    // Yağmur sensörünü giriş olarak ayarla
+    GPIO_InitStruct.Pin = RAIN_SENSOR_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN;  // Pin varsayılan olarak LOW
+    HAL_GPIO_Init(RAIN_SENSOR_PORT, &GPIO_InitStruct);
+
+    // Buzzer'ı çıkış olarak ayarla
+    GPIO_InitStruct.Pin = BUZZER_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(BUZZER_PORT, &GPIO_InitStruct);
+
+    // Başlangıçta buzzer kapalı
+    HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_RESET);
+
+    while (1) {
+        uint8_t rain_detected = HAL_GPIO_ReadPin(RAIN_SENSOR_PORT, RAIN_SENSOR_PIN);  // Yağmur sensöründen sinyal oku
+
+        if (rain_detected == GPIO_PIN_SET) {  // Yağmur algılandı
+            HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_SET);  // Buzzer aç
+            delay_ms(1000);  // 1 saniye buzzer açık kalsın
+            HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_RESET);  // Buzzer'ı kapat
+
+            // Yağmur sinyali tekrar algılanana kadar bekle
+            while (HAL_GPIO_ReadPin(RAIN_SENSOR_PORT, RAIN_SENSOR_PIN) == GPIO_PIN_SET) {
+                delay_ms(100);  // 100 ms bekle
+            }
+        }
+
+        delay_ms(100);  // Ana döngü gecikmesi
+    }
+}
+
+void delay_ms(uint32_t ms) {
+    HAL_Delay(ms);  // HAL fonksiyonu kullanarak gecikme
+}
