@@ -1,0 +1,63 @@
+#include "stm32f4xx.h"
+
+// Pin tanimlamalari
+#define RAIN_SENSOR_PIN    GPIO_PIN_0  // Yagmur sensörü GPIO pini
+#define RAIN_SENSOR_PORT   GPIOA       // Yagmur sensörü portu
+
+#define BUZZER_PIN         GPIO_PIN_1  // Buzzer GPIO pini
+#define BUZZER_PORT        GPIOA       // Buzzer portu
+
+void delay_ms(uint32_t ms);
+
+int main(void)
+{
+    // STM32'nin clock ve GPIO'larini baslatma
+    HAL_Init();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    // Yagmur sensörü pinini giris olarak ayarla
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = RAIN_SENSOR_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN;  // Pin varsayilan olarak LOW olsun
+    HAL_GPIO_Init(RAIN_SENSOR_PORT, &GPIO_InitStruct);
+
+    // Buzzer pinini çikis olarak ayarla
+    GPIO_InitStruct.Pin = BUZZER_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(BUZZER_PORT, &GPIO_InitStruct);
+
+    // Baslangiçta buzzer kapali
+    HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_RESET);
+
+    while (1)
+    {
+        // Yagmur sensöründen sinyal oku
+        uint8_t rain_detected = HAL_GPIO_ReadPin(RAIN_SENSOR_PORT, RAIN_SENSOR_PIN);
+
+        if (rain_detected == GPIO_PIN_SET) // Yagmur algilandi
+        {
+            // Buzzer çalistir
+            HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_SET);
+            delay_ms(1000); // 1 saniye buzzer açik kalsin
+
+            // Buzzer kapat
+            HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_RESET);
+
+            // Yagmur sinyali tekrar algilanana kadar bekle
+            while (HAL_GPIO_ReadPin(RAIN_SENSOR_PORT, RAIN_SENSOR_PIN) == GPIO_PIN_SET)
+            {
+                delay_ms(100); // Sinyalin düsmesini bekle
+            }
+        }
+
+        delay_ms(100); // Kontrol döngüsü
+    }
+}
+
+void delay_ms(uint32_t ms)
+{
+    HAL_Delay(ms); // HAL'in dahili delay fonksiyonunu kullan
+}
